@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ProQuiz Challenge</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Roboto:wght@400;500;700&family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif; 
+            background: linear-gradient(135deg, #1a202c 0%, #2d3748 100%);
+            color: #e2e8f0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        body.lang-hi {
+            font-family: 'Roboto', sans-serif; 
+        }
+
+        .quiz-container {
+            background-color: rgba(45, 55, 72, 0.85);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255,255,255,0.05) inset;
+            width: 95%;
+            max-width: 700px;
+            text-align: center;
+            border: 1px solid rgba(74, 85, 104, 0.5);
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (min-width: 640px) {
+            .quiz-container {
+                padding: 30px;
+            }
+        }
+
+        .screen {
+            display: none;
+            animation: fadeIn 0.7s ease-out forwards;
+        }
+
+        .screen.active {
+            display: block;
+        }
+
+        .screen.exiting {
+            animation: fadeOut 0.5s ease-in forwards;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes fadeOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
+        }
+        
+        .grid-container { 
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        @media (min-width: 640px) {
+            .grid-container {
+                grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Adjusted minmax */
+                gap: 12px; /* Adjusted gap */
+            }
+        }
+        
+        .action-button { 
+            background-color: #4a5568; 
+            color: #e2e8f0; 
+            border: none;
+            padding: 10px 12px; /* Adjusted padding */
+            border-radius: 8px;
+            font-size: 0.8rem; /* Adjusted font size */
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            font-weight: 600; 
+        }
+        
+        @media (min-width: 640px) {
+             .action-button {
+                padding: 12px 18px; /* Adjusted padding */
+                font-size: 0.9rem; /* Adjusted font size */
+             }
+        }
+
+        .action-button:hover {
+            background-color: #718096; 
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+        
+        .action-button.all-sections, .action-button.language-select {
+            background-color: #4c51bf; 
+        }
+        .action-button.all-sections:hover, .action-button.language-select:hover {
+            background-color: #434190; 
+        }
+        .action-button.all-sections {
+             grid-column: 1 / -1; 
+        }
+
+        .question-text {
+            font-size: 1.1rem;  /* Adjusted */
+            margin-bottom: 20px;
+            min-height: 60px; 
+            color: #cbd5e0; 
+            font-weight: 600;
+        }
+        @media (min-width: 640px) {
+            .question-text {
+                font-size: 1.3rem; /* Adjusted */
+            }
+        }
+
+        .options-container {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        @media (min-width: 640px) {
+            .options-container {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        .action-button.option { 
+            background-color: #2d3748; 
+            border: 1px solid #4a5568; 
+        }
+        .action-button.option:hover {
+            background-color: #4a5568; 
+        }
+
+        .timer-container {
+            margin-bottom: 20px;
+            height: 30px;
+            position: relative;
+        }
+
+        .timer-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem; 
+            color: #63b3ed; 
+            font-weight: 700;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 2;
+        }
+        
+        .timer-bar-background {
+            width: 100%;
+            height: 10px;
+            background-color: #4a5568; 
+            border-radius: 5px;
+            position: absolute;
+            bottom: 0;
+            left:0;
+        }
+
+        .timer-bar {
+            height: 100%;
+            background-color: #63b3ed; 
+            border-radius: 5px;
+            width: 100%;
+            transition: width 0.2s linear, background-color 0.5s ease;
+        }
+
+        .score-display {
+            font-size: 1.25rem; 
+            margin: 15px 0; /* Adjusted margin */
+            color: #a0aec0; 
+        }
+        @media (min-width: 640px) {
+            .score-display {
+                font-size: 1.4rem; /* Adjusted */
+            }
+        }
+
+        .results-summary {
+            font-size: 1.1rem; /* Adjusted */
+            margin-bottom: 15px; /* Adjusted margin */
+            line-height: 1.6;
+        }
+        .results-summary span {
+            font-weight: bold;
+        }
+        .results-summary .correct { color: #48bb78; } 
+        .results-summary .wrong { color: #f56565; } 
+
+        .control-buttons-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 15px; /* Adjusted margin */
+            justify-content: center;
+        }
+
+        @media (min-width: 640px) {
+            .control-buttons-container {
+                flex-direction: row;
+                gap: 12px; /* Adjusted gap */
+            }
+        }
+
+        .action-button.next-level { background-color: #38a169; } 
+        .action-button.next-level:hover { background-color: #2f855a; } 
+        .action-button.retry { background-color: #dd6b20; } 
+        .action-button.retry:hover { background-color: #c05621; } 
+        .action-button.show-answers, .action-button.home, .action-button.change-lang, .action-button.try-diff-cat { background-color: #718096; } 
+        .action-button.show-answers:hover, .action-button.home:hover, .action-button.change-lang:hover, .action-button.try-diff-cat:hover { background-color: #4a5568; } 
+
+        .answers-reveal-container {
+            margin-top: 15px; /* Adjusted margin */
+            text-align: left;
+            max-height: 180px; /* Adjusted max-height */
+            overflow-y: auto;
+            padding: 10px;
+            background-color: rgba(0,0,0,0.2);
+            border-radius: 8px;
+        }
+        .answers-reveal-container p {
+            margin-bottom: 8px;
+            font-size: 0.875rem; 
+        }
+        .answers-reveal-container strong {
+            color: #63b3ed; 
+        }
+
+        h1, h2, h3 { 
+            font-family: 'Orbitron', sans-serif;
+            color: #90cdf4; 
+            margin-bottom: 10px; 
+        }
+        h1 { font-size: 1.6rem; }  /* Adjusted */
+        h2 { font-size: 1.2rem; }  /* Adjusted */
+        h3 { font-size: 1rem; margin-top: 12px; } /* Adjusted */
+        
+        @media (min-width: 640px) {
+            h1 { font-size: 2rem; } /* Adjusted */
+            h2 { font-size: 1.4rem; } /* Adjusted */
+        }
+
+        .action-button.option { 
+            opacity: 0;
+            transform: translateY(10px);
+            animation: optionFadeIn 0.5s ease-out forwards;
+        }
+        .options-container .action-button.option:nth-child(1) { animation-delay: 0.1s; }
+        .options-container .action-button.option:nth-child(2) { animation-delay: 0.2s; }
+        .options-container .action-button.option:nth-child(3) { animation-delay: 0.3s; }
+        .options-container .action-button.option:nth-child(4) { animation-delay: 0.4s; }
+        .options-container .action-button.option:nth-child(5) { animation-delay: 0.5s; } /* For 5th option if any */
+
+
+        @keyframes optionFadeIn {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .timer-text.low-time {
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+            100% { transform: translate(-50%, -50%) scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="quiz-container">
+        <div id="language-screen" class="screen active">
+            <h1 id="lang-select-title">Select Language / भाषा चुनें</h1>
+            <div class="grid-container mt-6">
+                <button id="lang-en" class="action-button language-select">English</button>
+                <button id="lang-hi" class="action-button language-select">हिन्दी (Hindi)</button>
+            </div>
+        </div>
+
+        <div id="start-screen" class="screen">
+            <h1 id="start-title">ProQuiz Challenge</h1>
+            <p id="start-subtitle" class="mb-6 text-slate-400">Test your knowledge across various domains!</p>
+            <h2 id="category-select-title">Select a Category:</h2>
+            <div id="category-selection" class="grid-container">
+                </div>
+            <button id="all-sections-button" class="action-button all-sections mt-4">
+                </button>
+            <button id="change-language-button" class="action-button change-lang mt-4">
+                </button>
+        </div>
+
+        <div id="quiz-screen" class="screen">
+            <div id="quiz-header" class="flex justify-between items-center mb-4">
+                <p id="current-level-topic" class="text-lg font-semibold text-sky-400"></p>
+                <p id="question-counter" class="text-sm text-slate-400"></p>
+            </div>
+            <div class="timer-container">
+                <div class="timer-bar-background">
+                    <div id="timer-bar" class="timer-bar"></div>
+                </div>
+                <div id="timer-text" class="timer-text">25</div>
+            </div>
+            <div id="question-text" class="question-text">Question placeholder...</div>
+            <div id="options-container" class="options-container">
+                </div>
+             <button id="quit-quiz-button" class="action-button home mt-6">
+                </button>
+        </div>
+
+        <div id="results-screen" class="screen">
+            <h2 id="results-title">Level Complete!</h2>
+            <div id="results-summary" class="results-summary">Results summary...</div>
+            <div id="score-display" class="score-display">Your Score: 0 / 5</div>
+            <div id="level-feedback" class="mb-4 text-lg"></div>
+            <div id="category-completion-summary" class="mb-4 text-md text-amber-400" style="display:none;"></div>
+            <div id="control-buttons-container" class="control-buttons-container">
+                </div>
+            <div id="answers-reveal-container" class="answers-reveal-container" style="display: none;">
+                <h3 id="correct-answers-title">Correct Answers for this Level:</h3>
+                <div id="correct-answers-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- UI Text Translations ---
+        const uiText = {
+            en: {
+                proQuizChallenge: "ProQuiz Challenge",
+                testYourKnowledge: "Test your knowledge across various domains!",
+                selectCategory: "Select a Category:",
+                allSections: "All Sections Mix",
+                changeLanguage: "Change Language",
+                level: "Level",
+                question: "Question",
+                quitToHome: "Quit to Home",
+                levelComplete: "Level Complete!",
+                categoryComplete: "Category Complete!",
+                youAnswered: "You answered",
+                correctly: "correctly",
+                and: "and",
+                incorrectly: "incorrectly.",
+                yourScore: "Your Score:",
+                excellentPassed: "Excellent! You've passed this level.",
+                keepTrying: "Keep trying! You can do better.",
+                nextLevel: "Next Level",
+                retryLevel: "Retry Level",
+                showCorrectAnswers: "Show Correct Answers",
+                backToHome: "Back to Home",
+                correctAnswersForLevel: "Correct Answers for this Level:",
+                noMoreQuestions: "Not enough unique questions for the next level in this category. Please add more questions or try another category.",
+                noQuestionsToStart: "Not enough questions to start a level for this category. Please add more questions or select another category.",
+                answer: "Answer",
+                congratulationsCompletedAllLevels: "Congratulations! You've completed all {MAX_LEVELS} levels for {CATEGORY_NAME}. Total wrong answers in this category run: {WRONG_COUNT}.",
+                tryDifferentCategory: "Try a Different Category"
+            },
+            hi: {
+                proQuizChallenge: "प्रोक्विज़ चैलेंज",
+                testYourKnowledge: "विभिन्न क्षेत्रों में अपने ज्ञान का परीक्षण करें!",
+                selectCategory: "एक श्रेणी चुनें:",
+                allSections: "सभी वर्गों का मिश्रण",
+                changeLanguage: "भाषा बदलें",
+                level: "स्तर",
+                question: "प्रश्न",
+                quitToHome: "होम पर वापस जाएं",
+                levelComplete: "स्तर पूरा हुआ!",
+                categoryComplete: "श्रेणी पूरी हुई!",
+                youAnswered: "आपने",
+                correctly: "सही उत्तर दिए",
+                and: "और",
+                incorrectly: "गलत।",
+                yourScore: "आपका स्कोर:",
+                excellentPassed: "बहुत बढ़िया! आपने यह स्तर पार कर लिया है।",
+                keepTrying: "कोशिश करते रहें! आप बेहतर कर सकते हैं।",
+                nextLevel: "अगला स्तर",
+                retryLevel: "पुनः प्रयास करें",
+                showCorrectAnswers: "सही उत्तर दिखाएं",
+                backToHome: "होम पर वापस",
+                correctAnswersForLevel: "इस स्तर के सही उत्तर:",
+                noMoreQuestions: "इस श्रेणी में अगले स्तर के लिए पर्याप्त अद्वितीय प्रश्न नहीं हैं। कृपया अधिक प्रश्न जोड़ें या कोई अन्य श्रेणी आज़माएँ।",
+                noQuestionsToStart: "इस श्रेणी के लिए स्तर शुरू करने के लिए पर्याप्त प्रश्न नहीं हैं। कृपया अधिक प्रश्न जोड़ें या कोई अन्य श्रेणी चुनें।",
+                answer: "उत्तर",
+                congratulationsCompletedAllLevels: "बधाई हो! आपने {CATEGORY_NAME} के सभी {MAX_LEVELS} स्तर पूरे कर लिए हैं। इस श्रेणी में कुल गलत उत्तर: {WRONG_COUNT}।",
+                tryDifferentCategory: "दूसरी श्रेणी आज़माएँ"
+            }
+        };
+
+        // --- Question Bank (Loaded from JSON) ---
+        let loadedQuestions = {}; // This will hold the questions from questions.json
+
+        // --- DOM Elements ---
+        const languageScreen = document.getElementById('language-screen');
+        const startScreen = document.getElementById('start-screen');
+        const quizScreen = document.getElementById('quiz-screen');
+        const resultsScreen = document.getElementById('results-screen');
+
+        const langEnButton = document.getElementById('lang-en');
+        const langHiButton = document.getElementById('lang-hi');
+        const changeLanguageButton = document.getElementById('change-language-button');
+        
+        const categorySelectionContainer = document.getElementById('category-selection');
+        const allSectionsButton = document.getElementById('all-sections-button');
+        
+        const currentLevelTopicDisplay = document.getElementById('current-level-topic');
+        const questionCounterDisplay = document.getElementById('question-counter');
+        const timerText = document.getElementById('timer-text');
+        const timerBar = document.getElementById('timer-bar');
+        const questionTextEl = document.getElementById('question-text'); 
+        const optionsContainer = document.getElementById('options-container');
+        const quitQuizButton = document.getElementById('quit-quiz-button');
+
+        const resultsSummaryEl = document.getElementById('results-summary'); 
+        const scoreDisplayEl = document.getElementById('score-display'); 
+        const levelFeedbackEl = document.getElementById('level-feedback'); 
+        const categoryCompletionSummaryEl = document.getElementById('category-completion-summary');
+        const controlButtonsContainer = document.getElementById('control-buttons-container');
+        const answersRevealContainer = document.getElementById('answers-reveal-container');
+        const correctAnswersList = document.getElementById('correct-answers-list');
+
+        // --- Game State ---
+        let currentLanguage = 'en'; 
+        let currentCategory = '';
+        let currentQuestions = [];
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let timerId;
+        const INITIAL_TIME_LEFT = 25; 
+        let timeLeft = INITIAL_TIME_LEFT;
+        const QUESTIONS_PER_LEVEL = 10; // Updated as per user's JSON
+        const MAX_LEVELS_PER_CATEGORY = 6; // Updated as per user's JSON
+        const MIN_SCORE_TO_PASS = 6; // Updated for 10 questions (60%)
+
+        let askedQuestionGlobalIndices = new Set(); 
+        let questionsForCurrentLevel = []; 
+        let currentLevelNumber = 1;
+        let totalWrongAnswersInCategoryPlaythrough = 0;
+
+
+        // --- Functions ---
+
+        function setLanguage(lang) {
+            currentLanguage = lang;
+            document.body.className = `lang-${lang}`; 
+            updateUIText();
+            switchScreen('start-screen');
+        }
+
+        function updateUIText() {
+            const texts = uiText[currentLanguage];
+            document.getElementById('lang-select-title').textContent = "Select Language / भाषा चुनें"; 
+            document.getElementById('start-title').textContent = texts.proQuizChallenge;
+            document.getElementById('start-subtitle').textContent = texts.testYourKnowledge;
+            document.getElementById('category-select-title').textContent = texts.selectCategory;
+            allSectionsButton.textContent = texts.allSections;
+            changeLanguageButton.textContent = texts.changeLanguage;
+            quitQuizButton.textContent = texts.quitToHome;
+            document.getElementById('results-title').textContent = texts.levelComplete; 
+            document.getElementById('correct-answers-title').textContent = texts.correctAnswersForLevel;
+            
+            populateCategories(); 
+        }
+
+        function populateCategories() {
+            categorySelectionContainer.innerHTML = ''; 
+            // Use loadedQuestions.categories to get categories
+            if (loadedQuestions && loadedQuestions.categories) {
+                Object.keys(loadedQuestions.categories).forEach(categoryKey => {
+                    const button = document.createElement('button');
+                    button.textContent = categoryKey; 
+                    button.classList.add('action-button');
+                    button.addEventListener('click', () => startGame(categoryKey));
+                    categorySelectionContainer.appendChild(button);
+                });
+            } else {
+                console.error("Questions data not loaded or malformed.");
+            }
+        }
+
+        function switchScreen(activeScreenId) {
+            document.querySelectorAll('.screen').forEach(screen => {
+                if (screen.id === activeScreenId) {
+                    screen.classList.add('active');
+                } else if (screen.classList.contains('active')) {
+                    screen.classList.add('exiting');
+                    setTimeout(() => {
+                        screen.classList.remove('active');
+                        screen.classList.remove('exiting');
+                    }, 500); 
+                }
+            });
+        }
+        
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function getLevelQuestions(categoryKey) {
+            let sourceQuestionsPool = [];
+            
+            if (categoryKey === "All Sections") {
+                // Flatten all questions from all categories for 'All Sections Mix'
+                for (const cat in loadedQuestions.categories) {
+                    loadedQuestions.categories[cat].forEach((levelObj, levelIdx) => {
+                        const levelName = `level${levelIdx + 1}`;
+                        if (levelObj[levelName]) {
+                            levelObj[levelName].forEach((q, index) => {
+                                sourceQuestionsPool.push({ ...q, originalCategory: cat, originalIndex: index, originalLevel: levelIdx + 1 });
+                            });
+                        }
+                    });
+                }
+            } else {
+                // For a specific category, get questions for the current level
+                const categoryLevels = loadedQuestions.categories[categoryKey];
+                if (categoryLevels && currentLevelNumber <= categoryLevels.length) {
+                    const levelObj = categoryLevels[currentLevelNumber - 1];
+                    const levelName = `level${currentLevelNumber}`;
+                    if (levelObj && levelObj[levelName]) {
+                        sourceQuestionsPool = levelObj[levelName].map((q, index) => ({ 
+                            ...q, 
+                            originalCategory: categoryKey, 
+                            originalIndex: index, 
+                            originalLevel: currentLevelNumber 
+                        }));
+                    }
+                }
+            }
+
+            let newQuestions = sourceQuestionsPool.filter(q => {
+                const uniqueId = `${q.originalCategory}_${q.originalLevel}_${q.originalIndex}`;
+                return !askedQuestionGlobalIndices.has(uniqueId);
+            });
+            
+            shuffleArray(newQuestions);
+            
+            const levelQuestions = newQuestions.slice(0, QUESTIONS_PER_LEVEL);
+            
+            levelQuestions.forEach(q => {
+                 const uniqueId = `${q.originalCategory}_${q.originalLevel}_${q.originalIndex}`;
+                 askedQuestionGlobalIndices.add(uniqueId);
+            });
+            
+            if (levelQuestions.length < QUESTIONS_PER_LEVEL && sourceQuestionsPool.length > 0) {
+                 console.warn(`Not enough *new* unique questions for ${categoryKey} for this level to make a full set of ${QUESTIONS_PER_LEVEL}. Found ${levelQuestions.length}. Total unique questions might be running low for this category or all questions have been asked.`);
+            }
+            
+            return levelQuestions;
+        }
+
+        function startGame(categoryKey, isNextLevel = false) {
+            currentCategory = categoryKey;
+            if (!isNextLevel) { 
+                currentLevelNumber = 1;
+                totalWrongAnswersInCategoryPlaythrough = 0;
+            } 
+            
+            score = 0; 
+            currentQuestionIndex = 0;
+            currentQuestions = getLevelQuestions(currentCategory);
+            questionsForCurrentLevel = [...currentQuestions];
+
+            if (currentQuestions.length < QUESTIONS_PER_LEVEL && currentQuestions.length > 0) {
+                 console.warn(`Starting level with fewer than ${QUESTIONS_PER_LEVEL} questions (${currentQuestions.length}) as not enough unique new ones were available.`);
+            } else if (currentQuestions.length === 0) {
+                alert(uiText[currentLanguage].noQuestionsToStart);
+                if (isNextLevel) currentLevelNumber--; 
+                switchScreen('start-screen');
+                return;
+            }
+            
+            currentLevelTopicDisplay.textContent = `${currentCategory} - ${uiText[currentLanguage].level} ${currentLevelNumber}`;
+            categoryCompletionSummaryEl.style.display = 'none'; 
+            switchScreen('quiz-screen');
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex < currentQuestions.length && currentQuestions.length > 0) { 
+                const questionData = currentQuestions[currentQuestionIndex];
+                // Assuming questions from JSON are direct strings, not objects with 'en'/'hi'
+                questionTextEl.textContent = questionData.question; // Directly use the question string
+                optionsContainer.innerHTML = ''; 
+                
+                questionTextEl.style.opacity = '0';
+                questionTextEl.style.transform = 'translateY(20px)';
+                setTimeout(() => {
+                    questionTextEl.style.opacity = '1';
+                    questionTextEl.style.transform = 'translateY(0px)';
+                    questionTextEl.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                }, 50);
+
+                // Assuming options from JSON are direct array of strings
+                const shuffledOptions = shuffleArray([...questionData.options]);
+
+                shuffledOptions.forEach((optionText, index) => {
+                    const button = document.createElement('button');
+                    button.textContent = optionText;
+                    button.classList.add('action-button', 'option');
+                    button.style.animationDelay = `${index * 0.1}s`; 
+                    button.addEventListener('click', () => selectAnswer(optionText));
+                    optionsContainer.appendChild(button);
+                });
+
+                questionCounterDisplay.textContent = `${uiText[currentLanguage].question} ${currentQuestionIndex + 1} / ${currentQuestions.length}`; 
+                startTimer();
+            } else {
+                endLevel();
+            }
+        }
+
+        function selectAnswer(selectedOptionText) {
+            clearTimeout(timerId);
+            // Assuming answer from JSON is a direct string
+            const correctAnswerText = currentQuestions[currentQuestionIndex].correctAnswer; 
+            if (selectedOptionText === correctAnswerText) {
+                score++;
+            }
+            currentQuestionIndex++;
+            setTimeout(() => {
+                 loadQuestion();
+            }, 300); 
+        }
+
+        function startTimer() {
+            timeLeft = INITIAL_TIME_LEFT;
+            timerText.textContent = timeLeft;
+            timerBar.style.width = '100%';
+            timerBar.style.backgroundColor = '#63b3ed'; 
+            timerText.classList.remove('low-time');
+
+            timerId = setInterval(() => {
+                timeLeft--;
+                timerText.textContent = timeLeft;
+                timerBar.style.width = `${(timeLeft / INITIAL_TIME_LEFT) * 100}%`;
+
+                if (timeLeft <= 5) {
+                    timerBar.style.backgroundColor = '#f56565'; 
+                    timerText.classList.add('low-time');
+                } else if (timeLeft <= 10) {
+                    timerBar.style.backgroundColor = '#f6e05e'; 
+                }
+
+                if (timeLeft <= 0) {
+                    clearTimeout(timerId);
+                    currentQuestionIndex++;
+                     setTimeout(() => {
+                        loadQuestion();
+                    }, 300);
+                }
+            }, 1000);
+        }
+
+        function endLevel() {
+            clearTimeout(timerId);
+            switchScreen('results-screen');
+            
+            const texts = uiText[currentLanguage];
+            const correctCount = score;
+            const questionsInThisLevel = currentQuestions.length > 0 ? currentQuestions.length : QUESTIONS_PER_LEVEL;
+            const wrongCount = questionsInThisLevel - score;
+
+            totalWrongAnswersInCategoryPlaythrough += wrongCount;
+
+            resultsSummaryEl.innerHTML = `${texts.youAnswered} <span class="correct">${correctCount}</span> ${texts.correctly} ${texts.and} <span class="wrong">${wrongCount}</span> ${texts.incorrectly}`;
+            scoreDisplayEl.textContent = `${texts.yourScore} ${score} / ${questionsInThisLevel}`;
+            
+            controlButtonsContainer.innerHTML = ''; 
+            answersRevealContainer.style.display = 'none'; 
+            correctAnswersList.innerHTML = ''; 
+            categoryCompletionSummaryEl.style.display = 'none';
+
+
+            if (score >= MIN_SCORE_TO_PASS) { 
+                levelFeedbackEl.textContent = texts.excellentPassed;
+                levelFeedbackEl.className = 'mb-4 text-lg text-green-400';
+
+                if (currentLevelNumber >= MAX_LEVELS_PER_CATEGORY) {
+                    document.getElementById('results-title').textContent = texts.categoryComplete;
+                    let summaryMsg = texts.congratulationsCompletedAllLevels;
+                    summaryMsg = summaryMsg.replace("{MAX_LEVELS}", MAX_LEVELS_PER_CATEGORY)
+                                         .replace("{CATEGORY_NAME}", currentCategory)
+                                         .replace("{WRONG_COUNT}", totalWrongAnswersInCategoryPlaythrough);
+                    categoryCompletionSummaryEl.textContent = summaryMsg;
+                    categoryCompletionSummaryEl.style.display = 'block';
+                    levelFeedbackEl.style.display = 'none'; 
+
+                    const tryDifferentButton = document.createElement('button');
+                    tryDifferentButton.textContent = texts.tryDifferentCategory;
+                    tryDifferentButton.classList.add('action-button', 'try-diff-cat');
+                    tryDifferentButton.addEventListener('click', () => {
+                        askedQuestionGlobalIndices.clear(); 
+                        switchScreen('start-screen');
+                    });
+                    controlButtonsContainer.appendChild(tryDifferentButton);
+                } else {
+                     document.getElementById('results-title').textContent = texts.levelComplete;
+                    const nextLevelButton = document.createElement('button');
+                    nextLevelButton.textContent = `${texts.nextLevel} (${texts.level} ${currentLevelNumber + 1})`;
+                    nextLevelButton.classList.add('action-button', 'next-level');
+                    nextLevelButton.addEventListener('click', () => {
+                        currentLevelNumber++;
+                        startGame(currentCategory, true); 
+                    });
+                    controlButtonsContainer.appendChild(nextLevelButton);
+                }
+            } else { 
+                 document.getElementById('results-title').textContent = texts.levelComplete;
+                levelFeedbackEl.textContent = texts.keepTrying;
+                levelFeedbackEl.className = 'mb-4 text-lg text-yellow-400';
+                const retryButton = document.createElement('button');
+                retryButton.textContent = texts.retryLevel;
+                retryButton.classList.add('action-button', 'retry');
+                retryButton.addEventListener('click', () => {
+                    questionsForCurrentLevel.forEach(q => {
+                        const uniqueId = `${q.originalCategory}_${q.originalLevel}_${q.originalIndex}`;
+                        askedQuestionGlobalIndices.delete(uniqueId);
+                    });
+                    totalWrongAnswersInCategoryPlaythrough -= wrongCount; 
+                    startGame(currentCategory, currentLevelNumber > 1); 
+                });
+                controlButtonsContainer.appendChild(retryButton);
+
+                const showAnswersButton = document.createElement('button');
+                showAnswersButton.textContent = texts.showCorrectAnswers;
+                showAnswersButton.classList.add('action-button', 'show-answers');
+                showAnswersButton.addEventListener('click', displayCorrectAnswers);
+                controlButtonsContainer.appendChild(showAnswersButton);
+            }
+
+            const homeButton = document.createElement('button');
+            homeButton.textContent = texts.backToHome;
+            homeButton.classList.add('action-button', 'home');
+            homeButton.addEventListener('click', () => {
+                askedQuestionGlobalIndices.clear(); 
+                switchScreen('start-screen');
+            });
+            controlButtonsContainer.appendChild(homeButton);
+        }
+
+        function displayCorrectAnswers() {
+            correctAnswersList.innerHTML = ''; 
+            questionsForCurrentLevel.forEach(qData => {
+                // Assuming questions and answers from JSON are direct strings
+                const p = document.createElement('p');
+                p.innerHTML = `${uiText[currentLanguage].question}: ${qData.question} <br><strong>${uiText[currentLanguage].answer}: ${qData.correctAnswer}</strong>`;
+                correctAnswersList.appendChild(p);
+            });
+            answersRevealContainer.style.display = 'block';
+        }
+        
+        quitQuizButton.addEventListener('click', () => {
+            clearTimeout(timerId);
+            askedQuestionGlobalIndices.clear(); 
+            switchScreen('start-screen');
+        });
+
+        // --- Initialization ---
+        langEnButton.addEventListener('click', () => setLanguage('en'));
+        langHiButton.addEventListener('click', () => setLanguage('hi'));
+        changeLanguageButton.addEventListener('click', () => {
+            clearTimeout(timerId); 
+            switchScreen('language-screen');
+        });
+
+        allSectionsButton.addEventListener('click', () => startGame("All Sections"));
+        
+        // Fetch questions from JSON file
+        fetch('questions.json')
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Network response was not ok ' + response.statusText);
+                }
+                return response.json();
+            })
+            .then(data => {
+                loadedQuestions = data;
+                switchScreen('language-screen'); 
+                document.getElementById('lang-select-title').textContent = "Select Language / भाषा चुनें";
+                updateUIText(); // Call this here to populate categories after data is loaded
+            })
+            .catch(error => {
+                console.error('There was a problem fetching the questions:', error);
+                alert('Failed to load quiz questions. Please ensure "questions.json" is in the correct location and format.');
+            });
+
+    </script>
+</body>
+</html>
